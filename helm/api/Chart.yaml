@@ -1,0 +1,12 @@
+apiVersion: v2
+name: api
+description: Generic Helm chart for backend services (HPA, Ingress, ServiceMonitor)
+type: application
+version: 0.2.0
+appVersion: "1.0.0"
+keywords:
+  - api
+  - backend
+  - kubernetes
+maintainers:
+  - name: Mustafa Ozdal
