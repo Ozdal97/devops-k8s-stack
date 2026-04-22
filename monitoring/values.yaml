@@ -1,0 +1,59 @@
+grafana:
+  adminPassword: "changeMeOnFirstLogin"
+  defaultDashboardsTimezone: Europe/Istanbul
+  ingress:
+    enabled: false
+  persistence:
+    enabled: true
+    size: 5Gi
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+
+prometheus:
+  prometheusSpec:
+    retention: 15d
+    resources:
+      requests: { cpu: 200m, memory: 512Mi }
+      limits:   { cpu: "1",  memory: 2Gi }
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 30Gi
+
+alertmanager:
+  alertmanagerSpec:
+    storage:
+      volumeClaimTemplate:
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 5Gi
+  config:
+    route:
+      receiver: "slack-default"
+      group_by: ["alertname", "namespace"]
+      routes:
+        - matchers: [severity="critical"]
+          receiver: "slack-critical"
+    receivers:
+      - name: slack-default
+        slack_configs:
+          - send_resolved: true
+            channel: "#alerts"
+            api_url: "https://hooks.slack.com/services/REPLACE/ME"
+      - name: slack-critical
+        slack_configs:
+          - send_resolved: true
+            channel: "#alerts-critical"
+            api_url: "https://hooks.slack.com/services/REPLACE/ME"
+
+kubeStateMetrics:
+  enabled: true
+nodeExporter:
+  enabled: true
