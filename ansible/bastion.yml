@@ -1,0 +1,81 @@
+---
+- name: bootstrap bastion host
+  hosts: bastion
+  become: true
+  vars:
+    timezone: "Europe/Istanbul"
+    admin_user: "ozdal"
+  tasks:
+    - name: ensure base packages installed
+      apt:
+        name:
+          - curl
+          - jq
+          - git
+          - htop
+          - unzip
+          - ufw
+          - fail2ban
+          - vim
+          - tmux
+        state: present
+        update_cache: yes
+
+    - name: set timezone
+      community.general.timezone:
+        name: "{{ timezone }}"
+
+    - name: create admin user
+      user:
+        name: "{{ admin_user }}"
+        shell: /bin/bash
+        groups: sudo
+        append: yes
+
+    - name: deploy authorized_keys
+      authorized_key:
+        user: "{{ admin_user }}"
+        state: present
+        key: "{{ lookup('file', 'files/' ~ admin_user ~ '.pub') }}"
+
+    - name: harden ssh
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: "{{ item.regexp }}"
+        line: "{{ item.line }}"
+      loop:
+        - { regexp: '^#?PermitRootLogin', line: 'PermitRootLogin no' }
+        - { regexp: '^#?PasswordAuthentication', line: 'PasswordAuthentication no' }
+        - { regexp: '^#?X11Forwarding', line: 'X11Forwarding no' }
+      notify: restart sshd
+
+    - name: configure ufw
+      ufw:
+        rule: allow
+        port: "22"
+        proto: tcp
+
+    - name: enable ufw
+      ufw:
+        state: enabled
+        policy: deny
+
+    - name: install kubectl
+      shell: |
+        curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+        install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+      args:
+        creates: /usr/local/bin/kubectl
+
+    - name: install helm
+      shell: |
+        curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+        bash get_helm.sh
+      args:
+        creates: /usr/local/bin/helm
+
+  handlers:
+    - name: restart sshd
+      service:
+        name: ssh
+        state: restarted
