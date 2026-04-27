@@ -1,0 +1,58 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.7.5
+      - name: fmt check
+        run: terraform fmt -recursive -check
+      - name: validate staging
+        working-directory: terraform/envs/staging
+        run: |
+          terraform init -backend=false
+          terraform validate
+
+  helm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+        with:
+          version: v3.14.4
+      - name: lint
+        run: helm lint helm/api
+      - name: template (default)
+        run: helm template api helm/api > /tmp/default.yaml
+      - name: template (staging)
+        run: helm template api helm/api -f helm/api/values-staging.yaml > /tmp/staging.yaml
+
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: trivy fs
+        uses: aquasecurity/trivy-action@0.20.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+
+  yaml-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: install yamllint
+        run: pip install yamllint
+      - name: lint
+        run: yamllint -c .yamllint .
