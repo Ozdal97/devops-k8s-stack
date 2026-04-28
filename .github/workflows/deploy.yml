@@ -1,0 +1,25 @@
+name: deploy-staging
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "helm/**"
+      - "argocd/**"
+
+jobs:
+  bump-tag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: configure git
+        run: |
+          git config user.name "ci-bot"
+          git config user.email "ci-bot@users.noreply.github.com"
+      - name: update image tag
+        run: |
+          NEW_TAG="staging-$(date +%Y%m%d)-${GITHUB_SHA::7}"
+          sed -i "s|tag: \".*\"|tag: \"$NEW_TAG\"|" helm/api/values-staging.yaml
+          git add helm/api/values-staging.yaml
+          git diff --cached --quiet || git commit -m "chore(deploy): bump staging image to $NEW_TAG"
+          git push
