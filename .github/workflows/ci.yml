@@ -29,8 +29,9 @@ jobs:
           python3 - <<'PY'
           import os, sys, yaml
           bad = []
+          skip_dirs = ('/.git', '/helm/api/templates')
           for root, _, files in os.walk('.'):
-              if '/.git' in root or '/helm/' in root and '/templates/' in root:
+              if any(s in root for s in skip_dirs):
                   continue
               for f in files:
                   if f.endswith(('.yml', '.yaml')):
