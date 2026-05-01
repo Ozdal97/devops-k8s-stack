@@ -1,11 +1,8 @@
 name: deploy-staging
 
+# Manuel tetiklenir. Gercek CD icin GH secrets + ECR + ArgoCD repo write erisimi gerekir.
 on:
-  push:
-    branches: [main]
-    paths:
-      - "helm/**"
-      - "argocd/**"
+  workflow_dispatch:
 
 jobs:
   bump-tag:
